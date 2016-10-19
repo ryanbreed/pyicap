@@ -11,9 +11,9 @@ import sys
 import time
 import random
 import socket
-import string
-import urlparse
-import SocketServer
+#import urlparse
+import urllib.parse
+import socketserver
 
 class ICAPError(Exception):
     """Signals a protocol error"""
@@ -24,14 +24,14 @@ class ICAPError(Exception):
         super(ICAPError, self).__init__(message)
         self.code = code
 
-class ICAPServer(SocketServer.TCPServer):
+class ICAPServer(socketserver.TCPServer):
     """ICAP Server
 
     This is a simple TCPServer, that allows address reuse
     """
     allow_reuse_address = 1
 
-class BaseICAPRequestHandler(SocketServer.StreamRequestHandler):
+class BaseICAPRequestHandler(socketserver.StreamRequestHandler):
     """ICAP request handler base class.
 
     You have to subclass it and provide methods for each service
@@ -274,10 +274,10 @@ class BaseICAPRequestHandler(SocketServer.StreamRequestHandler):
             enc_body = 'null-body='
 
         if not self.icap_headers.has_key('ISTag'):
-            self.set_icap_header('ISTag', '"{0}"'.format(''.join(map(
-                lambda x: random.choice(string.ascii_letters + string.digits),
-                xrange(30)
-            ))))
+            self.set_icap_header('ISTag', ''.join(map(
+                lambda x: random.choice('ABCDIFGHIJabcdefghij1234567890'),
+                xrange(32)
+            )))
 
         if not self.icap_headers.has_key('Date'):
             self.set_icap_header('Date', self.date_time_string())
@@ -402,7 +402,7 @@ class BaseICAPRequestHandler(SocketServer.StreamRequestHandler):
 
         # Parse service name
         # TODO: document "url routing"
-        self.servicename = urlparse.urlparse(self.request_uri)[2].strip('/')
+        self.servicename = urllib.parse(self.request_uri)[2].strip('/')
 
     def handle(self):
         """Handles a connection
@@ -465,10 +465,10 @@ class BaseICAPRequestHandler(SocketServer.StreamRequestHandler):
             method()
             self.wfile.flush()
             self.log_request(self.icap_response_code)
-        except socket.timeout as e:
+        except (socket.timeout) as e:
             self.log_error("Request timed out: %r", e)
             self.close_connection = 1
-        except ICAPError as e:
+        except (ICAPError) as e:
             self.send_error(e.code, e.message)
         except:
             self.send_error(500)
